@@ -44,6 +44,12 @@ class Program
             var displayReply = FormatAgentOutput(trimmedInput, reply);
             conversationHistory.Add($"AI: {displayReply}");
 
+            var maximumHistoryItems = MaxContextMessages * 2;
+            if (conversationHistory.Count > maximumHistoryItems)
+            {
+                conversationHistory.RemoveRange(0, conversationHistory.Count - maximumHistoryItems);
+            }
+
             Console.WriteLine($"NitroAI-JKL-1: {displayReply}");
             Console.WriteLine();
         }
@@ -273,7 +279,7 @@ class Program
             {
                 "calculator" => "calculator",
                 "hello" => "Hello World program",
-                "game" => DetectGameType(input) == "rock-paper-scissors" ? "Rock Paper Scissors game" : "number guessing game",
+                "game" => DetectGameType(input) == "rock-paper-scissors" ? "Rock Paper Scissors game" : DetectGameType(input) == "dice" ? "dice-rolling game" : "number guessing game",
                 "todo" => "simple TODO list",
                 "application" => "console application",
                 _ => "short program"
@@ -393,6 +399,8 @@ class Program
                 "calculator" => "The calculator reads two values, checks the selected operator, and performs the calculation.",
                 "game" => DetectGameType(topic) == "rock-paper-scissors"
                     ? "The game chooses a move for the computer, reads your move, and compares both choices to determine the winner."
+                    : DetectGameType(topic) == "dice"
+                        ? "The game generates a random number from 1 to 6 to simulate a dice roll and can repeat the roll."
                     : "The game creates a secret number, reads guesses in a loop, and tells the player whether to guess higher or lower.",
                 "todo" => "The TODO program stores tasks in a list. Add creates a task, list displays tasks, and exit closes the program.",
                 "application" => "The application uses a main menu loop. The user selects an option, the program performs an action, and the menu appears again.",
@@ -432,6 +440,8 @@ class Program
             "calculator" => "Kalkulačka načte dvě hodnoty, zjistí operátor a pomocí podmínek nebo switch provede výpočet.",
             "game" => DetectGameType(topic) == "rock-paper-scissors"
                 ? "Hra vybere tah počítače, načte tah hráče a porovná obě volby, aby určila vítěze."
+                : DetectGameType(topic) == "dice"
+                    ? "Hra náhodně vygeneruje číslo od 1 do 6, čímž simuluje hod kostkou, a může házet opakovaně."
                 : "Hra vygeneruje tajné číslo, opakovaně čte tip hráče a pomocí cyklu poskytuje nápovědu, dokud hráč nevyhraje.",
             "todo" => "TODO program ukládá úkoly do seznamu. Příkaz add přidá úkol, list je vypíše a exit program ukončí.",
             "application" => "Aplikace má hlavní smyčku s nabídkou. Uživatel vybere možnost, program provede příslušnou akci a menu se zobrazí znovu.",
@@ -773,9 +783,16 @@ class Program
 
     static string GenerateGameCode(string language, string topic)
     {
-        if (DetectGameType(topic) == "rock-paper-scissors")
+        var gameType = DetectGameType(topic);
+
+        if (gameType == "rock-paper-scissors")
         {
             return GenerateRockPaperScissorsCode(language);
+        }
+
+        if (gameType == "dice")
+        {
+            return GenerateDiceCode(language);
         }
 
         if (language == "html")
@@ -799,6 +816,31 @@ class Program
         }
 
         return "using System;\n\nclass Program\n{\n    static void Main()\n    {\n        var random = new Random();\n        int secret = random.Next(1, 101);\n        int guess;\n\n        Console.WriteLine(\"Myslim si cislo od 1 do 100.\");\n        do\n        {\n            Console.Write(\"Tvuj tip: \" );\n            if (!int.TryParse(Console.ReadLine(), out guess))\n            {\n                Console.WriteLine(\"Zadej cele cislo.\");\n                continue;\n            }\n\n            if (guess < secret) Console.WriteLine(\"Moje cislo je vetsi.\");\n            else if (guess > secret) Console.WriteLine(\"Moje cislo je mensi.\");\n        } while (guess != secret);\n\n        Console.WriteLine(\"Vyhral jsi!\");\n    }\n}\n";
+    }
+
+    static string GenerateDiceCode(string language)
+    {
+        if (language == "python")
+        {
+            return "import random\n\nwhile input('Roll the dice? (y/n): ').lower() == 'y':\n    print(f'You rolled: {random.randint(1, 6)}')\nprint('Goodbye!')\n";
+        }
+
+        if (language == "cpp")
+        {
+            return "#include <iostream>\n#include <random>\n\nint main()\n{\n    std::random_device device;\n    std::mt19937 generator(device());\n    std::uniform_int_distribution<int> dice(1, 6);\n    char again;\n    do\n    {\n        std::cout << \"You rolled: \" << dice(generator) << std::endl;\n        std::cout << \"Roll again? (y/n): \";\n        std::cin >> again;\n    } while (again == 'y' || again == 'Y');\n}\n";
+        }
+
+        if (language == "batch")
+        {
+            return "@echo off\n:roll\nset /a result=%random% %% 6 + 1\necho You rolled: %result%\nset /p again=Roll again? (y/n): \nif /i \"%again%\"==\"y\" goto roll\necho Goodbye!\n";
+        }
+
+        if (language == "html")
+        {
+            return "<!DOCTYPE html>\n<html lang=\"en\">\n<body>\n    <h1>Dice Roller</h1>\n    <button onclick=\"roll()\">Roll the dice</button>\n    <p id=\"result\"></p>\n    <script>\n        function roll() { document.getElementById('result').textContent = `You rolled: ${Math.floor(Math.random() * 6) + 1}`; }\n    </script>\n</body>\n</html>\n";
+        }
+
+        return "using System;\n\nclass Program\n{\n    static void Main()\n    {\n        var random = new Random();\n        string again;\n        do\n        {\n            Console.WriteLine($\"You rolled: {random.Next(1, 7)}\");\n            Console.Write(\"Roll again? (y/n): \" );\n            again = Console.ReadLine() ?? string.Empty;\n        } while (again.Equals(\"y\", StringComparison.OrdinalIgnoreCase));\n        Console.WriteLine(\"Goodbye!\");\n    }\n}\n";
     }
 
     static string GenerateRockPaperScissorsCode(string language)
@@ -1022,6 +1064,13 @@ class Program
             value.Contains("scissors", StringComparison.OrdinalIgnoreCase))
         {
             return "rock-paper-scissors";
+        }
+
+        if (value.Contains("kostk", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("dice", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("hod kostkou", StringComparison.OrdinalIgnoreCase))
+        {
+            return "dice";
         }
 
         return "number-guessing";

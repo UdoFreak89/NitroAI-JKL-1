@@ -23,6 +23,7 @@ NitroAI-JKL-1 is a small .NET 10 console assistant designed to remain local and 
   - calculators
 	- number-guessing games
   - Rock Paper Scissors
+	- dice-rolling games
   - TODO lists
   - console applications
   - HTML pages
