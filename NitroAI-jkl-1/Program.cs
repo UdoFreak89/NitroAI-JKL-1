@@ -273,7 +273,7 @@ class Program
             {
                 "calculator" => "calculator",
                 "hello" => "Hello World program",
-                "game" => "number guessing game",
+                "game" => DetectGameType(input) == "rock-paper-scissors" ? "Rock Paper Scissors game" : "number guessing game",
                 "todo" => "simple TODO list",
                 "application" => "console application",
                 _ => "short program"
@@ -282,7 +282,7 @@ class Program
             {
                 "calculator" => "kalkulačku",
                 "hello" => "hello world",
-                "game" => "hru hádání čísla",
+                "game" => DetectGameType(input) == "rock-paper-scissors" ? "hru Kámen, nůžky, papír" : "hru hádání čísla",
                 "todo" => "jednoduchý todo seznam",
                 "application" => "konzolovou aplikaci",
                 _ => "krátký program"
@@ -337,7 +337,7 @@ class Program
                normalizedCode.TrimEnd() + Environment.NewLine +
                codeEnd + Environment.NewLine + Environment.NewLine +
                educationalTitle + Environment.NewLine +
-               GetEducationalMaterial(DetectProgramType(input), language, DetectUserLanguage(input) == "english");
+               GetEducationalMaterial(DetectProgramType(input), language, DetectUserLanguage(input) == "english", input);
     }
 
     static string LocalizeGeneratedCodeToEnglish(string code)
@@ -384,14 +384,16 @@ class Program
         return code;
     }
 
-    static string GetEducationalMaterial(string programType, string language, bool english)
+    static string GetEducationalMaterial(string programType, string language, bool english, string topic)
     {
         if (english)
         {
             var programHint = programType switch
             {
                 "calculator" => "The calculator reads two values, checks the selected operator, and performs the calculation.",
-                "game" => "The game creates a secret number, reads guesses in a loop, and tells the player whether to guess higher or lower.",
+                "game" => DetectGameType(topic) == "rock-paper-scissors"
+                    ? "The game chooses a move for the computer, reads your move, and compares both choices to determine the winner."
+                    : "The game creates a secret number, reads guesses in a loop, and tells the player whether to guess higher or lower.",
                 "todo" => "The TODO program stores tasks in a list. Add creates a task, list displays tasks, and exit closes the program.",
                 "application" => "The application uses a main menu loop. The user selects an option, the program performs an action, and the menu appears again.",
                 "hello" => "Hello World prints a message and then the program ends.",
@@ -428,7 +430,9 @@ class Program
         var czechProgramHint = programType switch
         {
             "calculator" => "Kalkulačka načte dvě hodnoty, zjistí operátor a pomocí podmínek nebo switch provede výpočet.",
-            "game" => "Hra vygeneruje tajné číslo, opakovaně čte tip hráče a pomocí cyklu poskytuje nápovědu, dokud hráč nevyhraje.",
+            "game" => DetectGameType(topic) == "rock-paper-scissors"
+                ? "Hra vybere tah počítače, načte tah hráče a porovná obě volby, aby určila vítěze."
+                : "Hra vygeneruje tajné číslo, opakovaně čte tip hráče a pomocí cyklu poskytuje nápovědu, dokud hráč nevyhraje.",
             "todo" => "TODO program ukládá úkoly do seznamu. Příkaz add přidá úkol, list je vypíše a exit program ukončí.",
             "application" => "Aplikace má hlavní smyčku s nabídkou. Uživatel vybere možnost, program provede příslušnou akci a menu se zobrazí znovu.",
             "hello" => "Hello World je nejjednodušší program: vypíše text do konzole a skončí.",
@@ -634,7 +638,7 @@ class Program
 
         if (programType == "game")
         {
-            return GenerateGameCode(language);
+            return GenerateGameCode(language, safeTopic);
         }
 
         if (programType == "todo")
@@ -767,8 +771,13 @@ class Program
         return "using System;\n\nclass Program\n{\n    static void Main()\n    {\n        Console.WriteLine(\"Hello from C#!\");\n    }\n}\n";
     }
 
-    static string GenerateGameCode(string language)
+    static string GenerateGameCode(string language, string topic)
     {
+        if (DetectGameType(topic) == "rock-paper-scissors")
+        {
+            return GenerateRockPaperScissorsCode(language);
+        }
+
         if (language == "html")
         {
             return "<!DOCTYPE html>\n<html lang=\"cs\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Hádej číslo</title>\n    <style>\n        body { font-family: sans-serif; max-width: 500px; margin: 40px auto; text-align: center; }\n        input, button { padding: 8px; margin: 4px; }\n    </style>\n</head>\n<body>\n    <h1>Hádej číslo</h1>\n    <p>Myslím si číslo od 1 do 100.</p>\n    <input id=\"guess\" type=\"number\" min=\"1\" max=\"100\">\n    <button onclick=\"checkGuess()\">Zkusit</button>\n    <p id=\"message\"></p>\n    <script>\n        const secret = Math.floor(Math.random() * 100) + 1;\n        function checkGuess() {\n            const guess = Number(document.getElementById('guess').value);\n            const message = document.getElementById('message');\n            if (guess < secret) message.textContent = 'Moje číslo je větší.';\n            else if (guess > secret) message.textContent = 'Moje číslo je menší.';\n            else message.textContent = 'Vyhrál jsi!';\n        }\n    </script>\n</body>\n</html>\n";
@@ -790,6 +799,31 @@ class Program
         }
 
         return "using System;\n\nclass Program\n{\n    static void Main()\n    {\n        var random = new Random();\n        int secret = random.Next(1, 101);\n        int guess;\n\n        Console.WriteLine(\"Myslim si cislo od 1 do 100.\");\n        do\n        {\n            Console.Write(\"Tvuj tip: \" );\n            if (!int.TryParse(Console.ReadLine(), out guess))\n            {\n                Console.WriteLine(\"Zadej cele cislo.\");\n                continue;\n            }\n\n            if (guess < secret) Console.WriteLine(\"Moje cislo je vetsi.\");\n            else if (guess > secret) Console.WriteLine(\"Moje cislo je mensi.\");\n        } while (guess != secret);\n\n        Console.WriteLine(\"Vyhral jsi!\");\n    }\n}\n";
+    }
+
+    static string GenerateRockPaperScissorsCode(string language)
+    {
+        if (language == "python")
+        {
+            return "import random\n\nchoices = ['rock', 'paper', 'scissors']\ncomputer = random.choice(choices)\nplayer = input('Choose rock, paper, or scissors: ').lower()\n\nprint(f'Computer chose: {computer}')\nif player not in choices:\n    print('Invalid choice.')\nelif player == computer:\n    print('Draw!')\nelif (player, computer) in [('rock', 'scissors'), ('paper', 'rock'), ('scissors', 'paper')]:\n    print('You won!')\nelse:\n    print('Computer won!')\n";
+        }
+
+        if (language == "cpp")
+        {
+            return "#include <iostream>\n#include <random>\n#include <string>\n\nint main()\n{\n    const std::string choices[] = { \"rock\", \"paper\", \"scissors\" };\n    std::random_device device;\n    std::mt19937 generator(device());\n    std::uniform_int_distribution<int> distribution(0, 2);\n    std::string player;\n    std::cout << \"Choose rock, paper, or scissors: \";\n    std::cin >> player;\n    const std::string computer = choices[distribution(generator)];\n    std::cout << \"Computer chose: \" << computer << std::endl;\n    if (player != \"rock\" && player != \"paper\" && player != \"scissors\") std::cout << \"Invalid choice.\";\n    else if (player == computer) std::cout << \"Draw!\";\n    else if ((player == \"rock\" && computer == \"scissors\") || (player == \"paper\" && computer == \"rock\") || (player == \"scissors\" && computer == \"paper\")) std::cout << \"You won!\";\n    else std::cout << \"Computer won!\";\n}\n";
+        }
+
+        if (language == "batch")
+        {
+            return "@echo off\nset /a computer=%random% %% 3 + 1\nset /p player=Choose rock, paper, or scissors: \nif /i \"%player%\"==\"rock\" set player=1\nif /i \"%player%\"==\"paper\" set player=2\nif /i \"%player%\"==\"scissors\" set player=3\nif not defined player echo Invalid choice. & pause & exit /b\necho Computer chose number %computer%\nif %player%==%computer% echo Draw!\nif %player%==1 if %computer%==3 echo You won!\nif %player%==2 if %computer%==1 echo You won!\nif %player%==3 if %computer%==2 echo You won!\npause\n";
+        }
+
+        if (language == "html")
+        {
+            return "<!DOCTYPE html>\n<html lang=\"en\">\n<body>\n    <h1>Rock, Paper, Scissors</h1>\n    <button onclick=\"play('rock')\">Rock</button>\n    <button onclick=\"play('paper')\">Paper</button>\n    <button onclick=\"play('scissors')\">Scissors</button>\n    <p id=\"result\"></p>\n    <script>\n        function play(player) {\n            const choices = ['rock', 'paper', 'scissors'];\n            const computer = choices[Math.floor(Math.random() * choices.length)];\n            const win = (player === 'rock' && computer === 'scissors') || (player === 'paper' && computer === 'rock') || (player === 'scissors' && computer === 'paper');\n            const result = player === computer ? 'Draw!' : win ? 'You won!' : 'Computer won!';\n            document.getElementById('result').textContent = `Computer chose ${computer}. ${result}`;\n        }\n    </script>\n</body>\n</html>\n";
+        }
+
+        return "using System;\n\nclass Program\n{\n    static void Main()\n    {\n        var choices = new[] { \"rock\", \"paper\", \"scissors\" };\n        var computer = choices[new Random().Next(choices.Length)];\n        Console.Write(\"Choose rock, paper, or scissors: \" );\n        var player = Console.ReadLine()?.ToLowerInvariant();\n        Console.WriteLine($\"Computer chose: {computer}\");\n        Console.WriteLine(player == computer ? \"Draw!\" : \"Try adding the win-condition logic here.\");\n    }\n}\n";
     }
 
     static string GenerateTodoCode(string language)
@@ -978,6 +1012,19 @@ class Program
         }
 
         return "generic";
+    }
+
+    static string DetectGameType(string value)
+    {
+        if (value.Contains("rock paper", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("kamen papir", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("kámen papír", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("scissors", StringComparison.OrdinalIgnoreCase))
+        {
+            return "rock-paper-scissors";
+        }
+
+        return "number-guessing";
     }
 
     static string ToPascalCase(string value)
