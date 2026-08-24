@@ -7,7 +7,8 @@ namespace jkl1;
 
 class Program
 {
-    private const int MaxContextMessages = 8;
+    private const int MaxContextTurns = 20;
+    private const int MaxContextMessageCharacters = 2500;
 
     static void Main(string[] args)
     {
@@ -39,12 +40,12 @@ class Program
                 break;
             }
 
-            conversationHistory.Add($"User: {trimmedInput}");
+            conversationHistory.Add($"User: {LimitContextMessage(trimmedInput)}");
             var reply = GenerateCodingAgentReply(trimmedInput, conversationHistory);
             var displayReply = FormatAgentOutput(trimmedInput, reply);
-            conversationHistory.Add($"AI: {displayReply}");
+            conversationHistory.Add($"AI: {LimitContextMessage(displayReply)}");
 
-            var maximumHistoryItems = MaxContextMessages * 2;
+            var maximumHistoryItems = MaxContextTurns * 2;
             if (conversationHistory.Count > maximumHistoryItems)
             {
                 conversationHistory.RemoveRange(0, conversationHistory.Count - maximumHistoryItems);
@@ -64,7 +65,7 @@ class Program
         }
 
         var recentContext = conversationHistory
-            .TakeLast(MaxContextMessages)
+            .TakeLast(MaxContextTurns * 2)
             .ToList();
 
         var previousUserMessage = recentContext
@@ -105,7 +106,12 @@ class Program
                 ? "žádný kontext"
                 : string.Join(" | ", recentContext.TakeLast(3));
 
-            return $"Agent status: ready. Kontext: {contextSummary}. Důležité: mám krátkou paměť pro posledních {MaxContextMessages} zpráv.";
+            return $"Agent status: ready. Kontext: {contextSummary}. I remember up to {MaxContextTurns} conversation turns.";
+        }
+
+        if (IsMemoryRequest(input))
+        {
+            return GetMemorySummary(conversationHistory, userLanguage == "english");
         }
 
         if (input.StartsWith("ask ", StringComparison.OrdinalIgnoreCase) ||
@@ -458,13 +464,13 @@ class Program
         var czechMarkers = new[]
         {
             "ahoj", "č", "ě", "š", "ř", "ž", "ý", "á", "í", "é", "ů", "ú",
-            "naprogramuj", "vytvoř", "vysvětli", "hra", "hru", "kalkulač", "aplikac"
+            "naprogramuj", "vytvoř", "vysvětli", "hra", "hru", "kalkulač", "aplikac", "pamatujes", "pamatuješ"
         };
 
         var englishMarkers = new[]
         {
             "hello", "hi", "please", "create", "make", "write", "build", "explain",
-            "game", "calculator", "application", "question", "how", "what", "why", "the", " in "
+            "game", "calculator", "application", "question", "remember", "memory", "show", "how", "what", "why", "the", " in "
         };
 
         var hasCzech = czechMarkers.Any(marker => input.Contains(marker, StringComparison.OrdinalIgnoreCase));
@@ -489,6 +495,51 @@ class Program
         }
 
         return "unknown";
+    }
+
+    static bool IsMemoryRequest(string input)
+    {
+        return input.Contains("co si pamatuješ", StringComparison.OrdinalIgnoreCase) ||
+               input.Contains("co si pamatujes", StringComparison.OrdinalIgnoreCase) ||
+               input.Contains("co si zapamatovala", StringComparison.OrdinalIgnoreCase) ||
+               input.Contains("what do you remember", StringComparison.OrdinalIgnoreCase) ||
+               input.Contains("what did i say", StringComparison.OrdinalIgnoreCase) ||
+               input.Contains("show memory", StringComparison.OrdinalIgnoreCase) ||
+               input.Contains("show remembered", StringComparison.OrdinalIgnoreCase);
+    }
+
+    static string GetMemorySummary(List<string> conversationHistory, bool english)
+    {
+        var rememberedMessages = conversationHistory
+            .Where(item => item.StartsWith("User:", StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.Substring("User:".Length).Trim())
+            .SkipLast(1)
+            .TakeLast(MaxContextTurns)
+            .ToList();
+
+        if (rememberedMessages.Count == 0)
+        {
+            return english
+                ? "I do not remember any previous messages yet."
+                : "Zatím si nepamatuji žádné předchozí zprávy.";
+        }
+
+        var title = english
+            ? $"I remember these {rememberedMessages.Count} previous user messages:"
+            : $"Pamatuji si těchto {rememberedMessages.Count} předchozích zpráv uživatele:";
+
+        return title + Environment.NewLine +
+               string.Join(Environment.NewLine, rememberedMessages.Select((message, index) => $"{index + 1}. {message}"));
+    }
+
+    static string LimitContextMessage(string message)
+    {
+        if (message.Length <= MaxContextMessageCharacters)
+        {
+            return message;
+        }
+
+        return message[..MaxContextMessageCharacters] + "\n[Context message truncated]";
     }
 
     static string GetArgument(string input, string command)
